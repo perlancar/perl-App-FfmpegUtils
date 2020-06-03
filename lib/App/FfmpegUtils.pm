@@ -45,16 +45,15 @@ $SPEC{reencode_video} = {
     summary => 'Re-encode video (using ffmpeg and H.264 codec)',
     description => <<'_',
 
-This utility runs ffmpeg to re-encode your video files. It's a wrapper to
+This utility runs ffmpeg to re-encode your video files. It is a wrapper to
 simplify invocation of ffmpeg. It selects the appropriate ffmpeg options for
-you, allows you to specify multiple files, and picks an appropriate output
+you, allows you to specify multiple files, and picks appropriate output
 filenames. It also sports a `--dry-run` option to let you see ffmpeg options to
 be used without actually running ffmpeg.
 
 This utility is usually used to reduce the file size (and optionally video
-width/height) so they are smaller, while minimizing quality loss.
-
-The default setting is roughly similar to how Google Photos encodes videos (max
+width/height) of videos so they are smaller, while minimizing quality loss. The
+default setting is roughly similar to how Google Photos encodes videos (max
 1080p).
 
 The default settings are:
@@ -112,16 +111,22 @@ _
             summary => 'The default setting is to downsize to 1080p',
             src => 'reencode-video *',
             src_plang => 'bash',
+            test => 0,
+            'x.doc.show_result' => 0,
         },
         {
             summary => 'Do not downsize',
             src => 'reencode-video --dont-downsize *',
             src_plang => 'bash',
+            test => 0,
+            'x.doc.show_result' => 0,
         },
         {
             summary => 'Downsize to 480p but make it "visually lossless"',
             src => 'reencode-video --downsize-to 480p --crf 18 *',
             src_plang => 'bash',
+            test => 0,
+            'x.doc.show_result' => 0,
         },
     ],
 };
