@@ -45,9 +45,17 @@ $SPEC{reencode_video} = {
     summary => 'Re-encode video (using ffmpeg and H.264 codec)',
     description => <<'_',
 
-This utility runs ffmpeg to re-encode your video files. Usually used to reduce
-the file size (and optionally video width/height) so they are smaller, while
-minimizing quality loss.
+This utility runs ffmpeg to re-encode your video files. It's a wrapper to
+simplify invocation of ffmpeg. It selects the appropriate ffmpeg options for
+you, allows you to specify multiple files, and picks an appropriate output
+filenames. It also sports a `--dry-run` option to let you see ffmpeg options to
+be used without actually running ffmpeg.
+
+This utility is usually used to reduce the file size (and optionally video
+width/height) so they are smaller, while minimizing quality loss.
+
+The default setting is roughly similar to how Google Photos encodes videos (max
+1080p).
 
 The default settings are:
 
@@ -55,8 +63,11 @@ The default settings are:
     -preset veryslow (to get the best compression rate, but with the slowest encoding time)
     -crf 28 (0-51, subjectively sane is 18-28, 18 ~ visually lossless, 28 ~ visually acceptable)
 
-when a downsizing is requested (using the `--downsize-to` option), the `-vf
-scale` option is used and this utility calculate a valid size for ffmpeg.
+when a downsizing is requested (using the `--downsize-to` option), this utility
+first checks each input video if it is indeed larger than the requested final
+size. If it is, then the `-vf scale` option is added. This utility also
+calculates a valid size for ffmpeg, since using `-vf scale=-1:720` sometimes
+results in failure due to odd number.
 
 Audio streams are copied, not re-encoded.
 
@@ -76,12 +87,43 @@ _
             schema => ['int*', between=>[0,51]],
         },
         downsize_to => {
-            schema => ['str*', in=>['480p', '720p', '1080p']],
+            schema => ['str*', in=>['', '480p', '720p', '1080p']],
+            default => '1080p',
+            description => <<'_',
+
+Downsizing will only be done if the input video is indeed larger then the target
+downsize.
+
+To disable downsizing, set `--downsize-to` to '' (empty string), or specify on
+`--dont-downsize` on the CLI.
+
+_
+            cmdline_aliases => {
+                dont_downsize => {summary=>"Alias for --downsize-to ''", is_flag=>1, code=>sub {$_[0]{downsize_to} = ''}},
+                no_downsize   => {summary=>"Alias for --downsize-to ''", is_flag=>1, code=>sub {$_[0]{downsize_to} = ''}},
+            },
         },
     },
     features => {
         dry_run => 1,
     },
+    examples => [
+        {
+            summary => 'The default setting is to downsize to 1080p',
+            src => 'reencode-video *',
+            src_plang => 'bash',
+        },
+        {
+            summary => 'Do not downsize',
+            src => 'reencode-video --dont-downsize *',
+            src_plang => 'bash',
+        },
+        {
+            summary => 'Downsize to 480p but make it "visually lossless"',
+            src => 'reencode-video --downsize-to 480p --crf 18 *',
+            src_plang => 'bash',
+        },
+    ],
 };
 sub reencode_video {
     require File::Which;
