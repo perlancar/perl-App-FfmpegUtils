@@ -42,7 +42,7 @@ sub _nearest {
 
 $SPEC{reencode_video} = {
     v => 1.1,
-    summary => 'Re-encode video (using ffmpeg and x264 codec)',
+    summary => 'Re-encode video (using ffmpeg and H.264 codec)',
     description => <<'_',
 
 This utility runs ffmpeg to re-encode your video files. Usually used to reduce
@@ -51,8 +51,9 @@ minimizing quality loss.
 
 The default settings are:
 
+    -v:c libx264
     -preset veryslow (to get the best compression rate, but with the slowest encoding time)
-    -crf 28 (minimum visual quality loss is 18-28, the smaller the better quality but higher file size)
+    -crf 28 (0-51, subjectively sane is 18-28, 18 ~ visually lossless, 28 ~ visually acceptable)
 
 when a downsizing is requested (using the `--downsize-to` option), the `-vf
 scale` option is used and this utility calculate a valid size for ffmpeg.
@@ -71,6 +72,9 @@ _
     args => {
         %arg0_files,
         %argopt_ffmpeg_path,
+        crf => {
+            schema => ['int*', between=>[0,51]],
+        },
         downsize_to => {
             schema => ['str*', in=>['480p', '720p', '1080p']],
         },
@@ -94,7 +98,6 @@ sub reencode_video {
         return [400, "ffmpeg path $ffmpeg_path is not executable"] unless -f $ffmpeg_path;
     }
 
-    #/usr/bin/ffmpeg -i VID_20180612_101619204.mp4 -vf scale=852:480 -c:v libx264 -crf 23 -preset veryslow -c:a copy VID_20180612_101619204.480p.mp4
     for my $file (@{$args{files}}) {
         log_info "Processing file %s ...", $file;
 
@@ -103,7 +106,7 @@ sub reencode_video {
             next;
         }
 
-        my $res = Media::Info::media_info(media => $file);
+        my $res = Media::Info::get_media_info(media => $file);
         unless ($res->[0] == 200) {
             log_error "Can't get media information fod %s: %s - %s, skipped",
                 $file, $res->[0], $res->[1];
@@ -111,7 +114,7 @@ sub reencode_video {
         }
         my $video_info = $res->[2];
 
-        my $crf = 28;
+        my $crf = $args{crf} // 28;
         my @ffmpeg_args = (
             "-i", $file,
         );
@@ -133,8 +136,8 @@ sub reencode_video {
 
             push @ffmpeg_args, "-vf", sprintf(
                 "scale=%d:%d",
-                _nearest($video_info->{video_width} / $ratio, 2),
-                _nearest($video_info->{video_height} / $ratio, 2)
+                _nearest($video_info->{video_width} / $ratio, 2),  # make sure divisible by 2 (optimum is divisible by 16, then 8, then 4)
+                _nearest($video_info->{video_height} / $ratio, 2),
             );
         } # DOWNSIZE
 
