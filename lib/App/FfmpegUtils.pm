@@ -165,6 +165,8 @@ sub reencode_video {
         my @ffmpeg_args = (
             "-i", $file,
         );
+
+        my $downsized;
       DOWNSIZE: {
             last unless $downsize_to;
             my $ratio;
@@ -181,6 +183,7 @@ sub reencode_video {
                 die "Invalid downsize_to value '$downsize_to'";
             }
 
+            $downsized++;
             push @ffmpeg_args, "-vf", sprintf(
                 "scale=%d:%d",
                 _nearest($video_info->{video_width} / $ratio, 2),  # make sure divisible by 2 (optimum is divisible by 16, then 8, then 4)
@@ -189,7 +192,7 @@ sub reencode_video {
         } # DOWNSIZE
 
         my $output_file = $file;
-        my $ext = $downsize_to ? ".$downsize_to-crf$crf.mp4" : ".crf$crf.mp4";
+        my $ext = $downsized ? ".$downsize_to-crf$crf.mp4" : ".crf$crf.mp4";
         $output_file =~ s/(\.\w{3,4})?\z/($1 eq ".mp4" ? "" : $1) . $ext/e;
 
         push @ffmpeg_args, (
