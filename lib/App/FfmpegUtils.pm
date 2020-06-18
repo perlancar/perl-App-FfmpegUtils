@@ -42,14 +42,14 @@ sub _nearest {
 
 $SPEC{reencode_video} = {
     v => 1.1,
-    summary => 'Re-encode video (using ffmpeg and H.264 codec)',
+    summary => 'Re-encode video (using ffmpeg and H.264)',
     description => <<'_',
 
-This utility runs ffmpeg to re-encode your video files. It is a wrapper to
-simplify invocation of ffmpeg. It selects the appropriate ffmpeg options for
-you, allows you to specify multiple files, and picks appropriate output
-filenames. It also sports a `--dry-run` option to let you see ffmpeg options to
-be used without actually running ffmpeg.
+This utility runs ffmpeg to re-encode your video files using the libx264 codec.
+It is a wrapper to simplify invocation of ffmpeg. It selects the appropriate
+ffmpeg options for you, allows you to specify multiple files, and picks
+appropriate output filenames. It also sports a `--dry-run` option to let you see
+ffmpeg options to be used without actually running ffmpeg.
 
 This utility is usually used to reduce the file size (and optionally video
 width/height) of videos so they are smaller, while minimizing quality loss. The
@@ -86,7 +86,7 @@ _
             schema => ['int*', between=>[0,51]],
         },
         downsize_to => {
-            schema => ['str*', in=>['', '480p', '720p', '1080p']],
+            schema => ['str*', in=>['', '360p', '480p', '720p', '1080p']],
             default => '1080p',
             description => <<'_',
 
@@ -101,6 +101,10 @@ _
                 dont_downsize => {summary=>"Alias for --downsize-to ''", is_flag=>1, code=>sub {$_[0]{downsize_to} = ''}},
                 no_downsize   => {summary=>"Alias for --downsize-to ''", is_flag=>1, code=>sub {$_[0]{downsize_to} = ''}},
             },
+        },
+        preset => {
+            schema => ['str*', in=>[qw/ultrafast superfast veryfast faster fast medium slow slower veryslow/]],
+            default => 'veryslow',
         },
     },
     features => {
@@ -170,7 +174,10 @@ sub reencode_video {
       DOWNSIZE: {
             last unless $downsize_to;
             my $ratio;
-            if ($downsize_to eq '480p') {
+            if ($downsize_to eq '360p') {
+                last unless $video_info->{video_shortest_side} > 360;
+                $ratio = $video_info->{video_shortest_side} / 360;
+            } elsif ($downsize_to eq '480p') {
                 last unless $video_info->{video_shortest_side} > 480;
                 $ratio = $video_info->{video_shortest_side} / 480;
             } elsif ($downsize_to eq '720p') {
@@ -198,7 +205,7 @@ sub reencode_video {
         push @ffmpeg_args, (
             "-c:v", "libx264",
             "-crf", $crf,
-            "-preset", "veryslow",
+            "-preset", ($args{preset} // 'veryslow'),
             "-c:a", "copy",
             $output_file,
         );
