@@ -40,9 +40,9 @@ sub _nearest {
     sprintf("%d", $_[0]/$_[1]) * $_[1];
 }
 
-$SPEC{reencode_video} = {
+$SPEC{reencode_video_with_libx264} = {
     v => 1.1,
-    summary => 'Re-encode video (using ffmpeg and H.264)',
+    summary => 'Re-encode video (using ffmpeg and libx264)',
     description => <<'_',
 
 This utility runs ffmpeg to re-encode your video files using the libx264 codec.
@@ -134,7 +134,7 @@ _
         },
     ],
 };
-sub reencode_video {
+sub reencode_video_with_libx264 {
     require File::Which;
     require IPC::System::Options;
     require Media::Info;
