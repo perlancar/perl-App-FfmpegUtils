@@ -42,14 +42,15 @@ sub _nearest {
 
 $SPEC{reencode_video} = {
     v => 1.1,
-    summary => 'Re-encode video (using ffmpeg and H.264 codec)',
+    summary => 'Re-encode video (using ffmpeg and H.264 codec) to reduce size with minimal visual quality loss',
     description => <<'_',
 
-This utility runs ffmpeg to re-encode your video files. It is a wrapper to
-simplify invocation of ffmpeg. It selects the appropriate ffmpeg options for
-you, allows you to specify multiple files, and picks appropriate output
-filenames. It also sports a `--dry-run` option to let you see ffmpeg options to
-be used without actually running ffmpeg.
+This utility runs ffmpeg to re-encode your video files, mainly those produced by
+your phones that have huge bitrate (e.g. >10-20Mbit) because they are not
+well-compressed yet. It is a wrapper to simplify invocation of ffmpeg. It
+selects the appropriate ffmpeg options for you, allows you to specify multiple
+files, and picks appropriate output filenames. It also sports a `--dry-run`
+option to let you see ffmpeg options to be used without actually running ffmpeg.
 
 This utility is usually used to reduce the file size (and optionally video
 width/height) of videos so they are smaller, while minimizing quality loss. The
