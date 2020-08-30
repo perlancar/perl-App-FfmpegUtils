@@ -36,6 +36,8 @@ our %argopt_ffmpeg_path = (
     },
 );
 
+my @presets = qw/ultrafast superfast veryfast faster fast medium slow slower veryslow/;
+
 sub _nearest {
     sprintf("%d", $_[0]/$_[1]) * $_[1];
 }
@@ -103,8 +105,11 @@ _
             },
         },
         preset => {
-            schema => ['str*', in=>[qw/ultrafast superfast veryfast faster fast medium slow slower veryslow/]],
+            schema => ['str*', in=>\@presets],
             default => 'veryslow',
+            cmdline_aliases => {
+                (map {($_ => {is_flag=>1, summary=>"Shortcut for --preset=$_", code=>do { my $p = $_; sub { $_[0]{preset} = $p }}})} @presets),
+            },
         },
     },
     features => {
