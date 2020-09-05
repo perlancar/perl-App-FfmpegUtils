@@ -108,6 +108,16 @@ _
             schema => ['str*', in=>[qw/ultrafast superfast veryfast faster fast medium slow slower veryslow/]],
             default => 'veryslow',
         },
+        frame_rate => {
+            summary => 'Set frame rate, in fps',
+            schema => 'ufloat*',
+            cmdline_aliases => {r=>{}},
+        },
+        audio_sample_rate => {
+            summary => 'Set audio sample rate, in Hz',
+            schema => 'uint*',
+            cmdline_aliases => {sample_rate=>{}},
+        },
     },
     features => {
         dry_run => 1,
@@ -204,11 +214,16 @@ sub reencode_video_with_libx264 {
         my $ext = $downsized ? ".$downsize_to-crf$crf.mp4" : ".crf$crf.mp4";
         $output_file =~ s/(\.\w{3,4})?\z/($1 eq ".mp4" ? "" : $1) . $ext/e;
 
+        my $audio_is_copy = 1;
+        $audio_is_copy = 0 if defined $args{audio_sample_rate};
+
         push @ffmpeg_args, (
             "-c:v", "libx264",
             "-crf", $crf,
             "-preset", ($args{preset} // 'veryslow'),
-            "-c:a", "copy",
+            (defined $args{frame_rate} ? ("-r", $args{frame_rate}) : ()),
+            "-c:a", ($audio_is_copy ? "copy" : "aac"),
+            (defined $args{audio_sample_rate} ? ("-ar", $args{audio_sample_rate}) : ()),
             $output_file,
         );
 
