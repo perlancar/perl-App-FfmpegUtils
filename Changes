@@ -1,3 +1,9 @@
+0.005   2020-09-05  Released-By: PERLANCAR; Urgency: medium
+
+	- Add option --frame-rate (-r) dan --audio-sample-rate
+	  (--sample-rate).
+
+
 0.004   2020-09-05  Released-By: PERLANCAR; Urgency: medium
 
 	- [rename] Rename script reencode-video to reencode-video-with-libx264.
