@@ -87,21 +87,25 @@ _
         crf => {
             schema => ['int*', between=>[0,51]],
         },
-        downsize_to => {
-            schema => ['str*', in=>['', '360p', '480p', '720p', '1080p']],
-            default => '1080p',
+        scale => {
+            schema => 'str*',
+            default => '1080^>',
             description => <<'_',
 
-Downsizing will only be done if the input video is indeed larger then the target
-downsize.
+Scale video to specified size. See <pm:Math::Image::CalcResized> or
+<prog:calc-image-resized-size> for more details on scale specification. Some
+examples include:
 
-To disable downsizing, set `--downsize-to` to '' (empty string), or specify on
-`--dont-downsize` on the CLI.
+The default is `1080^>` which means to shrink to 1080p if video size is larger
+than 1080p.
+
+To disable scaling, set `--scale` to '' (empty string), or specify
+`--dont-scale` on the CLI.
 
 _
             cmdline_aliases => {
-                dont_downsize => {summary=>"Alias for --downsize-to ''", is_flag=>1, code=>sub {$_[0]{downsize_to} = ''}},
-                no_downsize   => {summary=>"Alias for --downsize-to ''", is_flag=>1, code=>sub {$_[0]{downsize_to} = ''}},
+                dont_scale => {summary=>"Alias for --scale ''", is_flag=>1, code=>sub {$_[0]{scale} = ''}},
+                no_scale   => {summary=>"Alias for --scale ''", is_flag=>1, code=>sub {$_[0]{scale} = ''}},
             },
         },
         preset => {
@@ -117,22 +121,22 @@ _
     },
     examples => [
         {
-            summary => 'The default setting is to downsize to 1080p',
-            src => 'reencode-video *',
+            summary => 'The default setting is to shrink to 1080p if video is larger than 1080p',
+            src => '[[prog]] *',
             src_plang => 'bash',
             test => 0,
             'x.doc.show_result' => 0,
         },
         {
-            summary => 'Do not downsize',
-            src => 'reencode-video --dont-downsize *',
+            summary => 'Do not scale/shrink',
+            src => '[[prog]] --dont-scale *',
             src_plang => 'bash',
             test => 0,
             'x.doc.show_result' => 0,
         },
         {
-            summary => 'Downsize to 480p but make it "visually lossless"',
-            src => 'reencode-video --downsize-to 480p --crf 18 *',
+            summary => 'Shrink to 480p if video is larger than 480p, but make the reencoding "visually lossless"',
+            src => "[[prog]] --scale '480^>' --crf 18 *",
             src_plang => 'bash',
             test => 0,
             'x.doc.show_result' => 0,
@@ -147,7 +151,7 @@ sub reencode_video_with_libx264 {
     my %args = @_;
 
     my $ffmpeg_path = $args{ffmpeg_path} // File::Which::which("ffmpeg");
-    my $downsize_to = $args{downsize_to};
+    my $scale = $args{scale};
 
     unless ($args{-dry_run}) {
         return [400, "Cannot find ffmpeg in path"] unless defined $ffmpeg_path;
@@ -175,36 +179,31 @@ sub reencode_video_with_libx264 {
             "-i", $file,
         );
 
-        my $downsized;
-      DOWNSIZE: {
-            last unless $downsize_to;
-            my $ratio;
-            if ($downsize_to eq '360p') {
-                last unless $video_info->{video_shortest_side} > 360;
-                $ratio = $video_info->{video_shortest_side} / 360;
-            } elsif ($downsize_to eq '480p') {
-                last unless $video_info->{video_shortest_side} > 480;
-                $ratio = $video_info->{video_shortest_side} / 480;
-            } elsif ($downsize_to eq '720p') {
-                last unless $video_info->{video_shortest_side} > 720;
-                $ratio = $video_info->{video_shortest_side} / 720;
-            } elsif ($downsize_to eq '1080p') {
-                last unless $video_info->{video_shortest_side} > 1080;
-                $ratio = $video_info->{video_shortest_side} / 1080;
-            } else {
-                die "Invalid downsize_to value '$downsize_to'";
-            }
+        my $scale_suffix;
+      SCALE: {
+            last unless defined $scale && length $scale;
+            require Math::Image::CalcResized;
+            my $calcres = Math::Image::CalcResized::calc_image_resized_size(
+                size => "$video_info->{video_width}x$video_info->{video_height}",
+                resize => $scale,
+            );
+            return [400, "Can't scale using '$scale': $calcres->[0] - $calcres->[1]"]
+                unless $calcres->[0] == 200;
 
-            $downsized++;
+            my ($scaled_width, $scaled_height) = $calcres->[2] =~ /(.+)x(.+)/
+                or return [500, "calc_image_resized_size() doesn't return new WxH ($calcres->[2])"];
+            last unless $scaled_width != $video_info->{video_width} ||
+                $scaled_height != $video_info->{video_height};
+            ($scale_suffix = $calcres->[3]{'func.human_specific'}) =~ s/\W+/_/g;
             push @ffmpeg_args, "-vf", sprintf(
                 "scale=%d:%d",
-                _nearest($video_info->{video_width} / $ratio, 2),  # make sure divisible by 2 (optimum is divisible by 16, then 8, then 4)
-                _nearest($video_info->{video_height} / $ratio, 2),
+                _nearest($scaled_width, 2),  # make sure divisible by 2 (optimum is divisible by 16, then 8, then 4)
+                _nearest($scaled_height, 2),
             );
-        } # DOWNSIZE
+        } # SCALE
 
         my $output_file = $file;
-        my $ext = $downsized ? ".$downsize_to-crf$crf.mp4" : ".crf$crf.mp4";
+        my $ext = $scale_suffix ? ".$scale_suffix-crf$crf.mp4" : ".crf$crf.mp4";
         $output_file =~ s/(\.\w{3,4})?\z/($1 eq ".mp4" ? "" : $1) . $ext/e;
 
         push @ffmpeg_args, (
