@@ -44,6 +44,7 @@ sub _nearest {
 
 $SPEC{reencode_video_with_libx264} = {
     v => 1.1,
+    summary => 'Re-encode video (using ffmpeg and libx265) to reduce file size with minimal visual quality loss',
     summary => 'Re-encode video (using ffmpeg and libx264)',
     description => <<'_',
 
@@ -54,9 +55,10 @@ appropriate output filenames. It also sports a `--dry-run` option to let you see
 ffmpeg options to be used without actually running ffmpeg.
 
 This utility is usually used to reduce the file size (and optionally video
-width/height) of videos so they are smaller, while minimizing quality loss. The
-default setting is roughly similar to how Google Photos encodes videos (max
-1080p).
+width/height) of videos so they are smaller, while minimizing quality loss.
+Smartphone-produced videos are often high bitrate (e.g. >10-20Mbit) and not yet
+well compressed, so they make a good input for this utility. The default setting
+is roughly similar to how Google Photos encodes videos (max 1080p).
 
 The default settings are:
 
@@ -114,6 +116,16 @@ _
             cmdline_aliases => {
                 (map {($_ => {is_flag=>1, summary=>"Shortcut for --preset=$_", code=>do { my $p = $_; sub { $_[0]{preset} = $p }}})} @presets),
             },
+        },
+        frame_rate => {
+            summary => 'Set frame rate, in fps',
+            schema => 'ufloat*',
+            cmdline_aliases => {r=>{}},
+        },
+        audio_sample_rate => {
+            summary => 'Set audio sample rate, in Hz',
+            schema => 'uint*',
+            cmdline_aliases => {sample_rate=>{}},
         },
     },
     features => {
@@ -206,11 +218,16 @@ sub reencode_video_with_libx264 {
         my $ext = $scale_suffix ? ".$scale_suffix-crf$crf.mp4" : ".crf$crf.mp4";
         $output_file =~ s/(\.\w{3,4})?\z/($1 eq ".mp4" ? "" : $1) . $ext/e;
 
+        my $audio_is_copy = 1;
+        $audio_is_copy = 0 if defined $args{audio_sample_rate};
+
         push @ffmpeg_args, (
             "-c:v", "libx264",
             "-crf", $crf,
             "-preset", ($args{preset} // 'veryslow'),
-            "-c:a", "copy",
+            (defined $args{frame_rate} ? ("-r", $args{frame_rate}) : ()),
+            "-c:a", ($audio_is_copy ? "copy" : "aac"),
+            (defined $args{audio_sample_rate} ? ("-ar", $args{audio_sample_rate}) : ()),
             $output_file,
         );
 
