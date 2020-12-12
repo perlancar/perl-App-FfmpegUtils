@@ -267,6 +267,7 @@ $SPEC{split_video_by_duration} = {
             req => 1,
             pos => 1,
         },
+        # XXX merge_if_last_part_is_shorter_than => {},
         # XXX output_filename_pattern
     },
     examples => [
