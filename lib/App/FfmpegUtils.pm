@@ -300,7 +300,7 @@ _
         prog => "ffmpeg", # XXX allow FFMPEG_PATH
     },
     links => [
-        {url=>'prog:split-srt-by-duration'},
+        {url=>'prog:srtsplit', summary=>'Split .srt by duration, much like this utility'},
     ],
 };
 sub split_video_by_duration {
