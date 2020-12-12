@@ -299,7 +299,9 @@ _
     deps => {
         prog => "ffmpeg", # XXX allow FFMPEG_PATH
     },
-    links => ['prog:split-srt-by-duration'],
+    links => [
+        {url=>'prog:split-srt-by-duration'},
+    ],
 };
 sub split_video_by_duration {
     require POSIX;
