@@ -336,5 +336,70 @@ sub split_video_by_duration {
     [200];
 }
 
+$SPEC{cut_video_by_duration} = {
+    v => 1.1,
+    summary => 'Get a portion (time range) of a video',
+    description => <<'_',
+
+This utility uses *ffmpeg* (particularly the `-t` and `-ss`) option to get a
+portion (time range) of a video. It is a convenient wrapper of ffmpeg for this
+particular task. You can specify start time and end time, or start time and
+duration. It automatically chooses a filename if you don't specify one.
+
+_
+    args => {
+        %arg0_file,
+        # XXX start => {},
+        start => {
+            schema => 'duration*',
+            req => 1,
+            pos => 1,
+        },
+    },
+    examples => [
+    ],
+    features => {
+        dry_run => 1,
+    },
+    deps => {
+        prog => "ffmpeg", # XXX allow FFMPEG_PATH
+    },
+    links => [
+        {url=>'prog:srtsplit', summary=>'Split .srt by duration, much like this utility'},
+    ],
+};
+sub cut_video_by_duration {
+    require POSIX;
+
+    my %args = @_;
+    my $file = $args{file};
+    my $part_dur = $args{every};
+    $part_dur > 0 or return [400, "Please specify a non-zero --every"];
+
+    require Media::Info;
+    my $res = Media::Info::get_media_info(media => $file);
+    return $res unless $res->[0] == 200;
+
+    my $total_dur = $res->[2]{duration}
+        or return [412, "Duration of video is zero"];
+
+    my $num_parts = POSIX::ceil($total_dur / $part_dur);
+    my $fmt = $num_parts >= 1000 ? "%04d" : $num_parts >= 100 ? "%03d" : $num_parts >= 10 ? "%02d" : "%d";
+
+    return [304, "No split necessary"] if $num_parts < 2;
+
+    require IPC::System::Options;
+    for my $i (1..$num_parts) {
+        my $part_label = sprintf "${fmt}of%d", $i, $num_parts;
+        my $ofile = $file;
+        if ($ofile =~ /\.\w+\z/) { $ofile =~ s/(\.\w+)\z/.$part_label$1/ } else { $ofile .= ".$part_label" }
+        my $time_start = ($i-1)*$part_dur;
+        IPC::System::Options::system(
+            {log=>1, dry_run=>$args{-dry_run}},
+            "ffmpeg", "-i", $file, "-c", "copy", "-ss", $time_start, "-t", $part_dur, $ofile);
+    }
+    [200];
+}
+
 1;
 # ABSTRACT:
