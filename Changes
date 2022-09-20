@@ -1,3 +1,9 @@
+0.010   2022-09-20  Released-By: PERLANCAR; Urgency: medium
+
+        - [cli split-video-by-duration] Do not use '-c copy' option by
+          default, but uses it on --copy.
+
+
 0.009   2020-12-12  Released-By: PERLANCAR; Urgency: low
 
 	- No functional changes.
