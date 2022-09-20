@@ -1,16 +1,16 @@
 package App::FfmpegUtils;
 
-# AUTHORITY
-# DATE
-# DIST
-# VERSION
-
 use 5.010001;
 use strict;
 use warnings;
 use Log::ger;
 
 use Perinci::Exporter;
+
+# AUTHORITY
+# DATE
+# DIST
+# VERSION
 
 our %SPEC;
 
@@ -281,6 +281,10 @@ _
             req => 1,
             pos => 1,
         },
+        copy => {
+            summary => 'Whether to use the "copy" codec (fast but produces inaccurate timings)',
+            schema => 'bool*',
+        },
         # XXX merge_if_last_part_is_shorter_than => {},
         # XXX output_filename_pattern
     },
@@ -331,7 +335,7 @@ sub split_video_by_duration {
         my $time_start = ($i-1)*$part_dur;
         IPC::System::Options::system(
             {log=>1, dry_run=>$args{-dry_run}},
-            "ffmpeg", "-i", $file, "-c", "copy", "-ss", $time_start, "-t", $part_dur, $ofile);
+            "ffmpeg", "-i", $file, ($args{copy} ? ("-c", "copy") : ()), "-ss", $time_start, "-t", $part_dur, $ofile);
     }
     [200];
 }
@@ -349,7 +353,6 @@ duration. It automatically chooses a filename if you don't specify one.
 _
     args => {
         %arg0_file,
-        # XXX start => {},
         start => {
             schema => 'duration*',
             req => 1,
@@ -396,7 +399,7 @@ sub cut_video_by_duration {
         my $time_start = ($i-1)*$part_dur;
         IPC::System::Options::system(
             {log=>1, dry_run=>$args{-dry_run}},
-            "ffmpeg", "-i", $file, "-c", "copy", "-ss", $time_start, "-t", $part_dur, $ofile);
+            "ffmpeg", "-i", $file, ($args{copy} ? ("-c", "copy") : ()), "-ss", $time_start, "-t", $part_dur, $ofile);
     }
     [200];
 }
