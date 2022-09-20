@@ -19,7 +19,7 @@ $SPEC{':package'} = {
     summary => 'Utilities related to ffmpeg',
 };
 
-our %arg0_file = (
+our %argspec0_file = (
     file => {
         schema => 'filename*',
         req => 1,
@@ -27,7 +27,7 @@ our %arg0_file = (
     },
 );
 
-our %arg0_files = (
+our %argspec0_files = (
     files => {
         'x.name.is_plural' => 1,
         'x.name.singular' => 'file',
@@ -38,9 +38,16 @@ our %arg0_files = (
     },
 );
 
-our %argopt_ffmpeg_path = (
+our %argspecopt_ffmpeg_path = (
     ffmpeg_path => {
         schema => 'filename*',
+    },
+);
+
+our %argspecopt_copy = (
+    copy => {
+        summary => 'Whether to use the "copy" codec (fast but produces inaccurate timings)',
+        schema => 'bool*',
     },
 );
 
@@ -91,8 +98,8 @@ or (if downsizing is done):
 
 _
     args => {
-        %arg0_files,
-        %argopt_ffmpeg_path,
+        %argspec0_files,
+        %argspecopt_ffmpeg_path,
         crf => {
             schema => ['int*', between=>[0,51]],
         },
@@ -268,23 +275,16 @@ you will have 5 new video files: `long.1of5.mp4` (15min), `long.2of5.mp4`
 (15min), `long.3of5.mp4` (15min), `long.4of5.mp4` (15min), and `long.5of5.mp4`
 (12min).
 
-Currently this utility uses `-c copy` ffmpeg option, so there might be a few of
-seconds of glitches around the cut points. An option to use other codec will be
-provided in the future.
-
 _
     args => {
-        %arg0_file,
+        %argspec0_file,
         # XXX start => {},
         every => {
             schema => 'duration*',
             req => 1,
             pos => 1,
         },
-        copy => {
-            summary => 'Whether to use the "copy" codec (fast but produces inaccurate timings)',
-            schema => 'bool*',
-        },
+        %argspecopt_copy,
         # XXX merge_if_last_part_is_shorter_than => {},
         # XXX output_filename_pattern
     },
@@ -352,7 +352,7 @@ duration. It automatically chooses a filename if you don't specify one.
 
 _
     args => {
-        %arg0_file,
+        %argspec0_file,
         start => {
             schema => 'duration*',
             req => 1,
