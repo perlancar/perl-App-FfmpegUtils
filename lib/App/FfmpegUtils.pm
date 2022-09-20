@@ -6,6 +6,7 @@ use warnings;
 use Log::ger;
 
 use Perinci::Exporter;
+use Perinci::Object;
 
 # AUTHORITY
 # DATE
@@ -277,12 +278,11 @@ you will have 5 new video files: `long.1of5.mp4` (15min), `long.2of5.mp4`
 
 _
     args => {
-        %argspec0_file,
+        %argspec0_files,
         # XXX start => {},
         every => {
             schema => 'duration*',
             req => 1,
-            pos => 1,
         },
         %argspecopt_copy,
         # XXX merge_if_last_part_is_shorter_than => {},
@@ -293,6 +293,13 @@ _
             summary => 'Split video per 15 minutes',
             src_plang => 'bash',
             src => '[[prog]] --every 15min foo.mp4',
+            test => 0,
+            'x.doc.show_result' => 0,
+        },
+        {
+            summary => 'Split video per 30s for WhatsApp status',
+            src_plang => 'bash',
+            src => '[[prog]] foo.mp4 30s',
             test => 0,
             'x.doc.show_result' => 0,
         },
@@ -311,33 +318,58 @@ sub split_video_by_duration {
     require POSIX;
 
     my %args = @_;
-    my $file = $args{file};
+    my $files = $args{files};
     my $part_dur = $args{every};
     $part_dur > 0 or return [400, "Please specify a non-zero --every"];
 
-    require Media::Info;
-    my $res = Media::Info::get_media_info(media => $file);
-    return $res unless $res->[0] == 200;
+    my $envres = envresmulti();
+    my $j = -1;
+    for my $file (@$files) {
 
-    my $total_dur = $res->[2]{duration}
-        or return [412, "Duration of video is zero"];
+        $j++;
+        log_info "Processing file %s ...", $file;
 
-    my $num_parts = POSIX::ceil($total_dur / $part_dur);
-    my $fmt = $num_parts >= 1000 ? "%04d" : $num_parts >= 100 ? "%03d" : $num_parts >= 10 ? "%02d" : "%d";
+        require Media::Info;
+        my $res = Media::Info::get_media_info(media => $file);
+        unless ($res->[0] == 200) {
+            $envres->add_result($res->[0], "Can't get info for video $file: $res->[1]", {item_id=>$j});
+            next;
+        }
 
-    return [304, "No split necessary"] if $num_parts < 2;
+        my $total_dur = $res->[2]{duration};
+        unless ($total_dur) {
+            $envres->add_result(412, "Duration of video $file is zero", {item_id=>$j});
+            next;
+        }
 
-    require IPC::System::Options;
-    for my $i (1..$num_parts) {
-        my $part_label = sprintf "${fmt}of%d", $i, $num_parts;
-        my $ofile = $file;
-        if ($ofile =~ /\.\w+\z/) { $ofile =~ s/(\.\w+)\z/.$part_label$1/ } else { $ofile .= ".$part_label" }
-        my $time_start = ($i-1)*$part_dur;
-        IPC::System::Options::system(
-            {log=>1, dry_run=>$args{-dry_run}},
-            "ffmpeg", "-i", $file, ($args{copy} ? ("-c", "copy") : ()), "-ss", $time_start, "-t", $part_dur, $ofile);
-    }
-    [200];
+        my $num_parts = POSIX::ceil($total_dur / $part_dur);
+        my $fmt = $num_parts >= 1000 ? "%04d" : $num_parts >= 100 ? "%03d" : $num_parts >= 10 ? "%02d" : "%d";
+
+        unless ($num_parts >= 2) {
+            $envres->add_result(304, "No split necessary for video $file", {item_id=>$j});
+            next;
+        }
+
+        require IPC::System::Options;
+        for my $i (1..$num_parts) {
+            my $part_label = sprintf "${fmt}of%d", $i, $num_parts;
+            my $ofile = $file;
+            if ($ofile =~ /\.\w+\z/) { $ofile =~ s/(\.\w+)\z/.$part_label$1/ } else { $ofile .= ".$part_label" }
+            my $time_start = ($i-1)*$part_dur;
+            IPC::System::Options::system(
+                {log=>1, dry_run=>$args{-dry_run}},
+                "ffmpeg", "-i", $file, ($args{copy} ? ("-c", "copy") : ()), "-ss", $time_start, "-t", $part_dur, $ofile);
+            my ($exit_code, $signal, $core_dump) = ($? < 0 ? $? : $? >> 8, $? & 127, $? & 128);
+            if ($exit_code) {
+                $envres->add_result(500, "ffmpeg exited $exit_code (sig $signal) for video $file: $!", {item_id=>$j});
+            } else {
+                $envres->add_result(200, "Video $file successfully split", {item_id=>$j});
+            }
+        }
+
+    } # for $file
+
+    $envres->as_struct;
 }
 
 $SPEC{cut_video_by_duration} = {
