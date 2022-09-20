@@ -269,12 +269,16 @@ $SPEC{split_video_by_duration} = {
     summary => 'Split video by duration into parts',
     description => <<'_',
 
-This utility uses *ffmpeg* (particularly the `-t` and `-ss`) option to split a
+This utility uses **ffmpeg** (particularly the `-t` and `-ss`) option to split a
 longer video into shorter videos. For example, if you have `long.mp4` with
 duration of 1h12m and you run it through this utility with `--every 15min` then
 you will have 5 new video files: `long.1of5.mp4` (15min), `long.2of5.mp4`
 (15min), `long.3of5.mp4` (15min), `long.4of5.mp4` (15min), and `long.5of5.mp4`
 (12min).
+
+Compared to using `ffmpeg` directly, this wrapper offers convenience of
+calculating the times (`-ss`) option for you, handling multiple files,
+automatically choosing output filename, and tab completion.
 
 _
     args => {
@@ -378,9 +382,12 @@ $SPEC{cut_video_by_duration} = {
     description => <<'_',
 
 This utility uses *ffmpeg* (particularly the `-t` and `-ss`) option to get a
-portion (time range) of a video. It is a convenient wrapper of ffmpeg for this
-particular task. You can specify start time and end time, or start time and
-duration. It automatically chooses a filename if you don't specify one.
+portion (time range) of a video.
+
+Compared to using `ffmpeg` directly, this wrapper offers convenience of
+flexibility in specifying times and duration (e.g. '15s' as well as '00:10' as
+well as 'PT1M30S'), handling multiple files, automatically choosing output
+filename, and tab completion.
 
 _
     args => {
