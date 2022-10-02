@@ -302,6 +302,10 @@ _
         %argspecopt_copy,
         # XXX merge_if_last_part_is_shorter_than => {},
         # XXX output_filename_pattern
+        overwrite => {
+            schema => 'bool*',
+            cmdline_aliases => {O=>{}},
+        },
     },
     args_rels => {
         req_one => [qw/every parts/],
@@ -406,7 +410,7 @@ sub split_video_by_duration {
             my $time_start = ($i-1)*$part_dur;
             IPC::System::Options::system(
                 {log=>1, dry_run=>$args{-dry_run}},
-                "ffmpeg", "-i", $file, ($args{copy} ? ("-c", "copy") : ()), "-ss", $time_start, "-t", $part_dur, $ofile);
+                "ffmpeg", ($args{overwrite} ? "-y":"-n"), "-i", $file, ($args{copy} ? ("-c", "copy") : ()), "-ss", $time_start, "-t", $part_dur, $ofile);
             my ($exit_code, $signal, $core_dump) = ($? < 0 ? $? : $? >> 8, $? & 127, $? & 128);
             if ($exit_code) {
                 $envres->add_result(500, "ffmpeg exited $exit_code (sig $signal) for video $file: $!", {item_id=>$j});
