@@ -151,6 +151,10 @@ _
             schema => 'uint*',
             cmdline_aliases => {sample_rate=>{}},
         },
+        overwrite => {
+            schema => 'bool*',
+            cmdline_aliases => {O=>{}},
+        },
     },
     features => {
         dry_run => 1,
@@ -213,6 +217,7 @@ sub reencode_video_with_libx264 {
         my $crf = $args{crf} // 28;
         my @ffmpeg_args = (
             "-i", $file,
+            ($args{overwrite} ? "-y":"-n"),
         );
 
         my $scale_suffix;
