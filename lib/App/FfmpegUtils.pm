@@ -454,6 +454,10 @@ _
             cmdline_aliases => {d=>{}},
         },
         %argspecopt_copy,
+        overwrite => {
+            schema => 'bool*',
+            cmdline_aliases => {O=>{}},
+        },
     },
     args_rels => {
         req_one => [qw/start end duration/],
@@ -586,7 +590,7 @@ sub cut_video_by_duration {
         if ($ofile =~ /\.\w+\z/) { $ofile =~ s/(\.\w+)\z/.$label$1/ } else { $ofile .= ".$label" }
         IPC::System::Options::system(
             {log=>1, dry_run=>$args{-dry_run}},
-            "ffmpeg", "-i", $file, ($args{copy} ? ("-c", "copy") : ()), "-ss", $start, "-t", $duration, $ofile);
+            "ffmpeg", ($args{overwrite} ? "-y":"-n"), "-i", $file, ($args{copy} ? ("-c", "copy") : ()), "-ss", $start, "-t", $duration, $ofile);
         my ($exit_code, $signal, $core_dump) = ($? < 0 ? $? : $? >> 8, $? & 127, $? & 128);
         if ($exit_code) {
             $envres->add_result(500, "ffmpeg exited $exit_code (sig $signal) for video $file: $!", {item_id=>$j});
