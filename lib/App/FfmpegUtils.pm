@@ -451,7 +451,7 @@ _
         %argspecopt_copy,
     },
     args_rels => {
-        req_one => [qw/start end duration/],
+        req_one => [qw/start duration/],
     },
     examples => [
         {
