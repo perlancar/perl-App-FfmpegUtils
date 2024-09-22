@@ -613,6 +613,13 @@ flexibility in specifying times and duration (e.g. '15s' as well as '00:10' as
 well as 'PT1M30S'), specifying only 'end' and 'duration', handling multiple
 files, automatically choosing output filename, and tab completion.
 
+Alternatives:
+
+1. If you just want to play a video and censor out certain parts, you can use
+create a playlist of segments called an EDL file. See for example:
+
+<https://github.com/mpv-player/mpv/blob/master/DOCS/edl-mpv.rst>
+
 MARKDOWN
     args => {
         %argspec0_files,
