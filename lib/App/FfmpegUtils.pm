@@ -56,6 +56,7 @@ our %argspecopt_copy = (
 our %argspecsopt_duration = (
     start => {
         schema => ['any*', of=>['duration*', 'percent_str*']],
+        default => 0,
         cmdline_aliases => {s=>{}},
         },
     end => {
@@ -455,9 +456,6 @@ MARKDOWN
         %argspecsopt_duration,
         %argspecopt_copy,
     },
-    args_rels => {
-        req_one => [qw/start duration/],
-    },
     examples => [
         {
             summary => 'Specify start only, the result is 100s.cut_40_to_100.mp4',
@@ -510,7 +508,7 @@ sub cut_video_by_duration {
 
     my %args = @_;
     my $files = $args{files};
-    my $start0    = $args{start};
+    my $start0    = $args{start} // 0;
     my $end0      = $args{end};
     my $duration0 = $args{duration};
 
