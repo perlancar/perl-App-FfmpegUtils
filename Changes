@@ -1,3 +1,9 @@
+0.014   2025-10-29  Released-By: PERLANCAR; Urgency: medium
+
+        - [ux][cli cut-video-by-duration] Make --start optional (default to
+          0).
+
+
 0.013   2023-12-13  Released-By: PERLANCAR; Urgency: medium
 
         - [bugfix] Fix Rinci metadata.
