@@ -53,6 +53,14 @@ our %argspecopt_copy = (
     },
 );
 
+our %argspecopt_copy_default1 = (
+    copy => {
+        summary => 'Whether to use the "copy" codec (fast but produces inaccurate timings)',
+        schema => 'bool*',
+        default => 1,
+    },
+);
+
 our %argspecsopt_duration = (
     start => {
         schema => ['any*', of=>['duration*', 'percent_str*']],
@@ -66,6 +74,13 @@ our %argspecsopt_duration = (
     duration => {
         schema => ['any*', of=>['duration*', 'percent_str*']],
         cmdline_aliases => {d=>{}},
+    },
+);
+
+our %argspecopt_overwrite = (
+    overwrite => {
+        schema => 'bool*',
+        cmdline_aliases => {O=>{}},
     },
 );
 
@@ -168,10 +183,7 @@ MARKDOWN
             schema => 'uint*',
             cmdline_aliases => {sample_rate=>{}},
         },
-        overwrite => {
-            schema => 'bool*',
-            cmdline_aliases => {O=>{}},
-        },
+        %argspecopt_overwrite,
     },
     features => {
         dry_run => 1,
@@ -799,6 +811,80 @@ sub cut_duration_from_video {
     } # for $file
 
     $envres->as_struct;
+}
+
+$SPEC{join_audio} = {
+    v => 1.1,
+    summary => 'Join two or more audios (e.g. MP3 files)',
+    description => <<'MARKDOWN',
+
+This utility uses *ffmpeg* to join two or more audio files (e.g. MP3 files) into
+one.
+
+MARKDOWN
+    args => {
+        %argspec0_files,
+        %argspecopt_copy_default1,
+        output => {
+            schema => 'filename*',
+            cmdline_aliases => {o=>{}},
+            default => 'joined.mp3', # XXX should follow extension of input
+        },
+        %argspecopt_overwrite,
+    },
+    examples => [
+        {
+            summary => 'Join 3 MP3 files, output in joined.mp3',
+            argv => ['1.mp3', '2.mp3', '3.mp3'],
+            test => 0,
+            'x.doc.show_result' => 0,
+        },
+    ],
+    features => {
+        dry_run => 1,
+    },
+    deps => {
+        prog => "ffmpeg", # XXX allow FFMPEG_PATH
+    },
+    links => [
+    ],
+};
+sub join_audio {
+    require Cwd;
+    require File::Temp;
+    require IPC::System::Options;
+
+    my %args = @_;
+    my $files = $args{files};
+    unless (@$files >= 2) { return [400, "Please specify two or more audio files"] }
+    my $copy = $args{copy};
+    my $output = $args{output} // 'joined.mp3';
+    my $overwrite = $args{overwrite};
+
+    if (-f $output) {
+        if ($overwrite) {
+            log_info "Will overwrite output file '$output'";
+        } else {
+            return [409, "Refusing to overwrite existing output file '$output', use --overwrite to overwrite"];
+        }
+    }
+
+    my ($tempfh, $tempname) = File::Temp::tempfile(DIR => $CWD);
+    for my $file (@$files) {
+        print $tempfh "file '", Cwd::abs_path($file), "'\n";
+    }
+    close $tempfh;
+
+    IPC::System::Options::system(
+        {log=>1, die=>1},
+        "ffmpeg", "-f", "concat",
+        "-safe", 0,
+        "-i", $tempname,
+        ($copy ? ("-c", "copy") : ()),
+        $output,
+    );
+
+    [200];
 }
 
 1;
