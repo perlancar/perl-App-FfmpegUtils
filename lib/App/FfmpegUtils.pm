@@ -884,6 +884,8 @@ sub join_audio {
         $output,
     );
 
+    unlink $tempname;
+
     [200];
 }
 
